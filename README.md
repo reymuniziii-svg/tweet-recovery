@@ -1,0 +1,58 @@
+# tweet-recovery
+
+Recover a Twitter/X account's old tweets — including deleted ones — from the
+Internet Archive's Wayback Machine, and get them back as a clean spreadsheet.
+
+Built for accountability research: hand it a handle and a time range, get an
+`.xlsx` with every recoverable tweet, its exact date, and a link to the
+archived snapshot proving it.
+
+## Quickstart
+
+```bash
+pip install -r requirements.txt
+python recover.py --handle <handle> --from 2016-01-01 --to 2024-12-31
+```
+
+Output in `out/<handle>/`:
+
+- **`<handle> - Recovered Tweets.xlsx`** — three sheets:
+  - *Tweets*: Date · Tweet Text · Date Confidence · Source · Archive URL · Tweet ID · Capture Timestamp
+  - *Failed*: every unrecoverable ID with the honest reason
+  - *Summary*: counts, recovery rate, date range, method & caveats
+- **`tweets.csv` / `failed.csv`** — same data, flat, imports straight into Google Sheets
+
+Interrupted? Re-run the same command — it resumes where it left off.
+
+## How it works
+
+1. **Discover** — asks the Wayback CDX index for every capture of
+   `twitter.com|mobile.twitter.com|x.com|www.twitter.com/<handle>/status/*`,
+   dedupes to unique tweet IDs.
+2. **Extract** — fetches each tweet's raw snapshot (`id_` URLs, no Wayback
+   chrome) and pulls text from the legacy server-rendered markup or the
+   `og:description` meta tag. Verbatim only; no text found = honest failure.
+3. **Date** — decodes each tweet ID as a Twitter snowflake for an
+   exact-to-the-second timestamp, validated against the capture time.
+4. **Report** — builds the xlsx + CSVs.
+
+Typical recovery: ~85–92% for pre-2020-heavy accounts (proven run: 5,893 of
+6,470 @<handle> tweets, 91.1%). Post-2020 captures are often client-side
+"JS shells" with no extractable text — the main future-work target.
+
+## Using with a coding agent
+
+Clone the repo, open it in Claude Code (or any coding agent), and say:
+*"Recover tweets for @handle between 2018 and 2022."* The agent instructions
+in [CLAUDE.md](CLAUDE.md) cover the command, QA protocol, and integrity rules.
+
+## Future work
+
+- Headless-browser pass over `Needs Browser = True` failures (JS shells)
+- archive.today fallback for IDs Wayback lacks
+- Direct Google Sheets export
+
+## Comparative sources
+
+See [docs/sources.md](docs/sources.md) — Wayback is primary; archive.today,
+Politwoops, the Archive Team Twitter stream, and Memento fill gaps.
