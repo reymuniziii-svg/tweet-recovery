@@ -13,7 +13,9 @@ from pathlib import Path
 from lib.cdx import CdxClient
 from lib.snowflake import capture_ts_to_datetime, snowflake_to_datetime
 
-HOSTS = ["twitter.com", "www.twitter.com", "mobile.twitter.com", "x.com"]
+# CDX canonicalizes www.* into the bare host, so twitter.com already
+# covers www.twitter.com — querying both returns identical rows twice.
+HOSTS = ["twitter.com", "mobile.twitter.com", "x.com"]
 STATUS_RE = re.compile(r"/status(?:es)?/(\d{6,25})")
 
 # Extract tries captures 200s-first / oldest-first; keep a bounded set.

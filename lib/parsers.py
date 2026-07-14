@@ -12,8 +12,12 @@ Cascade (verbatim text only — nothing inferred, nothing fabricated):
 
 import html
 import re
+import warnings
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
+
+# Some captures are XML (RSS/redirect stubs); the HTML parser handles them fine.
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 _WS = re.compile(r"\s+")
 

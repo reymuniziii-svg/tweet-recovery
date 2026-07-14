@@ -26,6 +26,10 @@ def parse_date(s: str) -> date:
 
 
 def main():
+    # Line-buffer stdout so progress streams when output is redirected
+    # (background runs, tee, agent harnesses).
+    sys.stdout.reconfigure(line_buffering=True)
+
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--handle", required=True, help="Twitter/X handle (with or without @)")
     ap.add_argument("--from", dest="date_from", type=parse_date, default=None,
