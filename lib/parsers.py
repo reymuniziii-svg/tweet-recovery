@@ -37,7 +37,14 @@ def extract_tweet_text(raw_html: str):
         # mobile.twitter.com legacy pages and non-permalink layouts
         el = soup.select_one(".tweet-text") or soup.select_one(".js-tweet-text")
     if el is not None:
-        # Hidden URL-expansion helpers duplicate link text; drop them.
+        # Legacy markup ellipsizes link display text (t.co wrappers); the
+        # full destination lives in data-expanded-url. Substitute it so
+        # URLs come out complete instead of truncated.
+        for a in el.find_all("a"):
+            expanded = a.get("data-expanded-url")
+            if expanded:
+                a.replace_with(expanded)
+        # Remaining hidden helpers (media links etc.) duplicate text; drop.
         for junk in el.select(".tco-ellipsis, .invisible"):
             junk.decompose()
         text = _clean(el.get_text())
