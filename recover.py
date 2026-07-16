@@ -46,12 +46,16 @@ def main():
                     help="Reuse the existing manifest instead of re-querying CDX")
     args = ap.parse_args()
 
-    handle = args.handle.lstrip("@").lower()
+    # Lowercase drives CDX queries and paths (URLs are case-insensitive, and
+    # resume state must land in one place); the display form keeps the handle
+    # as the operator typed it for anything user-facing.
+    display_handle = args.handle.lstrip("@")
+    handle = display_handle.lower()
     root = Path(__file__).parent
     workdir = root / "work" / handle
     outdir = Path(args.out) if args.out else root / "out" / handle
 
-    print(f"[recover] @{handle}"
+    print(f"[recover] @{display_handle}"
           + (f" from {args.date_from}" if args.date_from else "")
           + (f" to {args.date_to}" if args.date_to else ""))
 
@@ -68,7 +72,7 @@ def main():
     extract(manifest, workdir, workers=args.workers,
             max_captures=args.max_captures, throttle_s=args.throttle)
 
-    xlsx = build_sheet(handle, workdir, outdir,
+    xlsx = build_sheet(display_handle, workdir, outdir,
                        raw_captures=manifest["raw_captures"],
                        unique_ids=manifest["unique_ids"])
     print(f"[recover] done -> {xlsx}")
