@@ -44,9 +44,11 @@ future-work target.
 
 ## Using with a coding agent
 
-Clone the repo, open it in Claude Code (or any coding agent), and say:
-*"Recover tweets for @handle between 2018 and 2022."* The agent instructions
-in [CLAUDE.md](CLAUDE.md) cover the command, QA protocol, and integrity rules.
+Clone the repo, open it in any coding agent (Claude Code, Codex, Cursor), and
+say: *"Recover tweets for @handle between 2018 and 2022."* The agent
+instructions in [AGENTS.md](AGENTS.md) cover the command, QA protocol, and
+integrity rules. `CLAUDE.md` is a symlink to the same file, so Claude Code
+picks it up automatically — edit `AGENTS.md` only.
 
 ## Future work
 
