@@ -27,8 +27,8 @@ Interrupted? Re-run the same command — it resumes where it left off.
 ## How it works
 
 1. **Discover** — asks the Wayback CDX index for every capture of
-   `twitter.com|mobile.twitter.com|x.com|www.twitter.com/<handle>/status/*`,
-   dedupes to unique tweet IDs.
+   `twitter.com|mobile.twitter.com|x.com/<handle>/status/*`, dedupes to unique
+   tweet IDs.
 2. **Extract** — fetches each tweet's raw snapshot (`id_` URLs, no Wayback
    chrome) and pulls text from the legacy server-rendered markup or the
    `og:description` meta tag. Verbatim only; no text found = honest failure.
@@ -36,9 +36,11 @@ Interrupted? Re-run the same command — it resumes where it left off.
    exact-to-the-second timestamp, validated against the capture time.
 4. **Report** — builds the xlsx + CSVs.
 
-Typical recovery: ~85–92% for pre-2020-heavy accounts (proven run: 5,893 of
-6,470 @<handle> tweets, 91.1%). Post-2020 captures are often client-side
-"JS shells" with no extractable text — the main future-work target.
+Typical recovery: ~85–90%. Two verified runs: 6,580 of 7,698 IDs (85.5%) and
+3,272 of 3,658 (89.4%), both spot-checked verbatim against live snapshots.
+Recovery tracks *era*, not capture density — post-2020 captures are often
+client-side "JS shells" with no extractable text, which is the main
+future-work target.
 
 ## Using with a coding agent
 
