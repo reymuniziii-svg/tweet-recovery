@@ -25,7 +25,7 @@ class CdxClient:
         self.max_retries = max_retries
         self._last_request = 0.0
 
-    def query(self, url_pattern: str):
+    def query(self, url_pattern: str, extra_params: dict | None = None):
         """Yield capture dicts (timestamp, original, statuscode, digest)
         for a CDX prefix query, following resume keys until exhausted."""
         resume_key = None
@@ -38,6 +38,9 @@ class CdxClient:
                 "limit": PAGE_LIMIT,
                 "showResumeKey": "true",
             }
+            if extra_params:
+                # List values become repeated params (CDX's filter= is repeatable).
+                params.update(extra_params)
             if resume_key:
                 params["resumeKey"] = resume_key
             rows = self._get_json(params)

@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from stages.build_sheet import build_sheet
 from stages.discover import discover
 from stages.extract import extract
+from stages.extract_pages import extract_pages
 
 
 def parse_date(s: str) -> date:
@@ -44,6 +45,10 @@ def main():
                     help="Min seconds between snapshot fetches (default 0.6)")
     ap.add_argument("--skip-discover", action="store_true",
                     help="Reuse the existing manifest instead of re-querying CDX")
+    ap.add_argument("--no-pages", action="store_true",
+                    help="Skip mining archived profile/timeline page captures")
+    ap.add_argument("--max-page-captures", type=int, default=400,
+                    help="Profile-page captures to fetch after sampling (default 400)")
     args = ap.parse_args()
 
     # Lowercase drives CDX queries and paths (URLs are case-insensitive, and
@@ -63,18 +68,34 @@ def main():
     if args.skip_discover and manifest_path.exists():
         manifest = json.loads(manifest_path.read_text())
         print(f"[recover] reusing manifest: {manifest['unique_ids']} IDs")
+        if not args.no_pages and "pages" not in manifest:
+            print("[recover] warning: manifest predates page support — "
+                  "re-run without --skip-discover to mine profile-page captures")
     else:
-        manifest = discover(handle, workdir, args.date_from, args.date_to)
-    if not manifest["tweets"]:
+        manifest = discover(handle, workdir, args.date_from, args.date_to,
+                            include_pages=not args.no_pages,
+                            max_page_captures=args.max_page_captures)
+    if not manifest["tweets"] and not manifest.get("pages"):
         print("[recover] nothing found in the archive for this handle/range.")
         return
+
+    if not args.no_pages and manifest.get("pages"):
+        extract_pages(manifest, workdir, workers=args.workers,
+                      throttle_s=args.throttle,
+                      date_from=args.date_from, date_to=args.date_to)
 
     extract(manifest, workdir, workers=args.workers,
             max_captures=args.max_captures, throttle_s=args.throttle)
 
+    page_stats = None
+    if manifest.get("pages"):
+        page_stats = {"raw_page_captures": manifest.get("raw_page_captures", 0),
+                      "selected": manifest.get("page_captures_selected", 0)}
     xlsx = build_sheet(display_handle, workdir, outdir,
                        raw_captures=manifest["raw_captures"],
-                       unique_ids=manifest["unique_ids"])
+                       unique_ids=manifest["unique_ids"],
+                       page_stats=page_stats,
+                       manifest_ids=set(manifest["tweets"]))
     print(f"[recover] done -> {xlsx}")
     print(f"[recover]        {outdir / 'tweets.csv'}")
     print(f"[recover]        {outdir / 'failed.csv'}")

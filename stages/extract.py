@@ -8,54 +8,14 @@ resume by skipping IDs already present in either file.
 
 import json
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import requests
 
+from lib.fetch import Throttle, polite_get, USER_AGENT
 from lib.parsers import extract_tweet_text
 from lib.snowflake import capture_ts_to_datetime, snowflake_to_datetime
-
-USER_AGENT = "tweet-recovery/1.0 (archival research tool; contact: repo operator)"
-RETRY_STATUSES = {429, 500, 502, 503, 504}
-
-
-class _Throttle:
-    """Global minimum spacing between requests across worker threads."""
-
-    def __init__(self, interval: float):
-        self.interval = interval
-        self.lock = threading.Lock()
-        self.last = 0.0
-
-    def wait(self):
-        with self.lock:
-            now = time.monotonic()
-            delay = self.last + self.interval - now
-            self.last = max(now, self.last + self.interval)
-        if delay > 0:
-            time.sleep(delay)
-
-
-def _polite_get(session, url, throttle, max_retries=4):
-    """GET with throttle + backoff. Returns Response or None on network failure."""
-    for attempt in range(max_retries):
-        throttle.wait()
-        try:
-            resp = session.get(url, timeout=30, allow_redirects=True)
-        except requests.RequestException:
-            time.sleep(min(2 ** attempt * 2, 30))
-            continue
-        if resp.status_code in RETRY_STATUSES:
-            retry_after = resp.headers.get("Retry-After")
-            try:
-                time.sleep(min(float(retry_after), 120))
-            except (TypeError, ValueError):
-                time.sleep(min(2 ** attempt * 3, 60))
-            continue
-        return resp
-    return None
 
 
 def _process_one(tid: str, entry: dict, session, throttle, max_captures: int):
@@ -69,7 +29,7 @@ def _process_one(tid: str, entry: dict, session, throttle, max_captures: int):
         ts, original = cap["timestamp"], cap["original"]
         attempted.append(ts)
         archive_url = f"https://web.archive.org/web/{ts}id_/{original}"
-        resp = _polite_get(session, archive_url, throttle)
+        resp = polite_get(session, archive_url, throttle)
         if resp is None:
             saw_fetch_failure = True
             continue
@@ -99,6 +59,9 @@ def _process_one(tid: str, entry: dict, session, throttle, max_captures: int):
             "archive_url": archive_url,
             "capture_timestamp": ts,
             "method": method,
+            "recovered_via": "status",
+            "is_retweet": False,
+            "retweeted_user": None,
         }
 
     if saw_html_shell:
@@ -140,7 +103,7 @@ def extract(manifest: dict, workdir: Path, workers=3, max_captures=4, throttle_s
 
     session = requests.Session()
     session.headers["User-Agent"] = USER_AGENT
-    throttle = _Throttle(throttle_s)
+    throttle = Throttle(throttle_s)
     write_lock = threading.Lock()
     counts = {"recovered": 0, "failed": 0}
 
